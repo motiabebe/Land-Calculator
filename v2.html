@@ -3,230 +3,348 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Land Area Calculator</title>
+    <title>Coordinate Plotter</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
     <!-- Embedded CSS -->
     <style>
-        #landShape {
-            border: 1px solid #ccc;
-            background-color: #f8f9fa; /* Light background for the canvas */
-            display: block; /* Helps with centering sometimes */
-            margin: auto; /* Center the SVG if its container allows */
-            max-width: 100%; /* Make SVG responsive */
-            height: auto; /* Maintain aspect ratio */
-            /* Explicit viewbox for consistent scaling in JS */
-            /* viewbox defines the coordinate system x, y, width, height */
-            viewBox: "0 0 400 350";
+        body {
+            background-color: #f8f9fa;
+            padding-top: 1rem;
         }
-
-        #landPolygon {
-            fill: rgba(40, 167, 69, 0.4); /* Semi-transparent green */
-            stroke: #212529; /* Dark stroke */
-            stroke-width: 2;
+        .card {
+            border: none;
+            height: 100%;
         }
-
-        /* Optional: Style for text labels if you add them */
-        /*
-        #landShape text {
-            font-family: sans-serif;
-            font-size: 10px;
-            fill: #555;
-        }
-        */
-
-         /* Ensure SVG container takes up space */
-        .svg-container {
-            min-height: 380px; /* Adjust as needed */
+        #map {
+            height: 500px;
             width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            border: 1px solid #dee2e6;
+            border-radius: var(--bs-card-inner-border-radius);
         }
+        .coord-input {
+            min-width: 120px;
+        }
+        thead th {
+            text-align: center;
+        }
+         tbody td {
+            vertical-align: middle;
+         }
+         .point-id {
+            text-align: center;
+            font-weight: bold;
+         }
+         .remove-row-btn {
+             cursor: pointer;
+             color: var(--bs-danger);
+         }
+          .remove-row-btn:hover {
+             color: var(--bs-danger-text-emphasis);
+         }
+         .alert-danger small {
+            display: block;
+         }
     </style>
 </head>
 <body>
-    <div class="container mt-4">
-        <h1 class="mb-4 text-center">Land Plot Area Calculator & Visualizer</h1>
+    <div class="container mt-4 mb-5">
+        <h1 class="mb-5 text-center fw-light">Land Plot Coordinate Visualizer</h1>
 
         <div class="row g-4">
             <!-- Input Column -->
-            <div class="col-md-5">
-                <h2>Enter Dimensions (meters)</h2>
-                <form id="landForm">
-                    <div class="mb-3">
-                        <label for="front" class="form-label">Front:</label>
-                        <input type="number" class="form-control" id="front" min="0" step="0.01" placeholder="e.g., 10.5">
-                    </div>
-                    <div class="mb-3">
-                        <label for="back" class="form-label">Back:</label>
-                        <input type="number" class="form-control" id="back" min="0" step="0.01" placeholder="e.g., 12.0">
-                    </div>
-                    <div class="mb-3">
-                        <label for="left" class="form-label">Left Side:</label>
-                        <input type="number" class="form-control" id="left" min="0" step="0.01" placeholder="e.g., 20.0">
-                    </div>
-                    <div class="mb-3">
-                        <label for="right" class="form-label">Right Side:</label>
-                        <input type="number" class="form-control" id="right" min="0" step="0.01" placeholder="e.g., 21.5">
-                    </div>
-                </form>
+            <div class="col-lg-5 d-flex flex-column">
+                <div class="card shadow-sm mb-4 flex-grow-1">
+                    <div class="card-body p-4">
+                        <h2 class="card-title mb-3 text-center h4">Enter Corner Coordinates</h2>
 
-                <hr>
+                        <div class="alert alert-danger mb-3" role="alert">
+                            <h5 class="alert-heading h6"><i class="bi bi-exclamation-octagon-fill me-2"></i>Coordinate System Mismatch!</h5>
+                            <small>The entered X/Y coordinates appear to be Projected Coordinates (like UTM), not Latitude/Longitude.</small>
+                            <small class="mt-1">Leaflet requires Latitude/Longitude. Displaying these coordinates directly results in incorrect placement (often a flat line).</small>
+                             <small class="mt-1"><b>Workaround Applied:</b> The shape is scaled and centered around the approximate Lat/Lon provided to show its form, but its exact position relative to map features may be slightly off without full reprojection.</small>
+                            <small class="mt-1">For accurate plotting, coordinates must be reprojected from their source system (e.g., UTM) to WGS84 (Lat/Lon).</small>
+                        </div>
 
-                <h2>Approximate Area:</h2>
-                <p class="fs-4">
-                    <span id="resultArea" class="fw-bold">0.00</span> sq. meters
-                </p>
-                 <p class="text-muted small">
-                    Note: This area calculation is an approximation (Average Length x Average Width) suitable for relatively regular plots. Exact area calculation for irregular quadrilaterals requires additional information like angles or diagonals.
-                 </p>
-
+                        <form id="coordForm">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" id="coordTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Point</th>
+                                            <th>X</th>
+                                            <th>Y</th>
+                                            <th></th> {/* For remove button */}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Coordinate rows will be added here by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button type="button" class="btn btn-sm btn-outline-success" id="addPointBtn">
+                                    <i class="bi bi-plus-circle me-1"></i> Add Point
+                                </button>
+                                <button type="button" class="btn btn-primary" id="plotMapBtn">
+                                    <i class="bi bi-geo-alt-fill me-1"></i> Plot on Map
+                                </button>
+                            </div>
+                        </form>
+                        <hr>
+                         <p class="text-muted small">
+                            Enter Projected Coordinates (e.g., UTM). The map visualizes the *shape* centered near the provided Lat/Lon using a scaling workaround. The position is approximate without reprojection.
+                        </p>
+                    </div>
+                </div>
             </div>
 
-            <!-- Visualization Column -->
-            <div class="col-md-7">
-                 <h2 class="text-center">Live Shape Preview</h2>
-                 <div class="svg-container">
-                     <!-- Define SVG with viewBox for consistent coordinate system -->
-                     <svg id="landShape" viewBox="0 0 400 350" preserveAspectRatio="xMidYMid meet" width="100%" height="350">
-                         <polygon id="landPolygon" points="50,300 150,300 150,200 50,200" />
-                         <!-- Labels can be added here if needed -->
-                     </svg>
+            <!-- Map Visualization Column -->
+            <div class="col-lg-7">
+                 <div class="card shadow-sm">
+                     <div class="card-body p-4">
+                          <h2 class="card-title mb-4 text-center h4">Map Preview (Shape Only - Location Approximate)</h2>
+                          <div id="map"></div>
+                     </div>
                  </div>
-
             </div>
         </div>
-
-
     </div>
 
-    <!-- Bootstrap 5 JS Bundle (includes Popper) -->
+    <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <!-- Embedded JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Get DOM elements
-            const frontInput = document.getElementById('front');
-            const backInput = document.getElementById('back');
-            const leftInput = document.getElementById('left');
-            const rightInput = document.getElementById('right');
-            const resultAreaSpan = document.getElementById('resultArea');
-            const landPolygon = document.getElementById('landPolygon');
-            const svgElement = document.getElementById('landShape');
+            // --- DOM Elements ---
+            const addPointBtn = document.getElementById('addPointBtn');
+            const plotMapBtn = document.getElementById('plotMapBtn');
+            const coordTableBody = document.querySelector('#coordTable tbody');
 
-            // Get SVG dimensions from the viewBox attribute for coordinate system
-            const svgWidth = svgElement.viewBox.baseVal.width;
-            const svgHeight = svgElement.viewBox.baseVal.height;
-            const padding = 40; // Padding inside SVG canvas coordinate system
+            // --- Leaflet Map Initialization ---
+            const baseCoords = [9.05769, 38.73700]; // Approx. Lat/Lon from Google Maps
+            const initialZoom = 18;
 
-            function updateShapeAndArea() {
-                // Get values, default to 0 if NaN or empty
-                const front = parseFloat(frontInput.value) || 0;
-                const back = parseFloat(backInput.value) || 0;
-                const left = parseFloat(leftInput.value) || 0;
-                const right = parseFloat(rightInput.value) || 0;
+            const map = L.map('map').setView(baseCoords, initialZoom);
 
-                // --- Area Calculation (Approximation) ---
-                // Using Average Length x Average Width method
-                const avgWidth = (front + back) / 2;
-                const avgHeight = (left + right) / 2;
-                const area = avgWidth * avgHeight;
+            // --- Define Base Layers ---
+            const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Shape location approximate'
+            });
 
-                // Display area
-                resultAreaSpan.textContent = area.toFixed(2);
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                 maxZoom: 19, // Match max zoom
+                 attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            });
 
-                // --- Visualization ---
-                if (!svgWidth || !svgHeight) {
-                    console.error("SVG dimensions not found. Ensure SVG has width/height or viewBox.");
-                    return; // Exit if dimensions aren't set
-                }
+            // --- Add Default Base Layer to Map ---
+            osmLayer.addTo(map); // Add OSM as the default visible layer
 
-                // Determine max dimensions from input for scaling base
-                const maxWidthInput = Math.max(front, back, 1); // Avoid division by zero, use at least 1
-                const maxHeightInput = Math.max(left, right, 1);
+            // --- Define Layer Groups and Controls ---
+            const plotLayer = L.layerGroup().addTo(map); // Add plot layer group to map
 
-                // Calculate available drawing space within the SVG coordinate system
-                const drawWidth = svgWidth - 2 * padding;
-                const drawHeight = svgHeight - 2 * padding;
+            // Correctly define baseMaps using the layer variables
+            const baseMaps = {
+                "Street Map": osmLayer,
+                "Satellite": satelliteLayer
+            };
 
-                // Calculate scale factor - fit the larger dimension into available space
-                let scale = 1;
-                if (maxWidthInput > 0 && maxHeightInput > 0) {
-                     scale = Math.min(drawWidth / maxWidthInput, drawHeight / maxHeightInput);
-                     // Add a small factor to prevent touching edges if dimensions exactly match drawing space
-                     scale *= 0.98;
-                } else if (maxWidthInput > 0) {
-                    scale = drawWidth / maxWidthInput * 0.98;
-                } else if (maxHeightInput > 0) {
-                    scale = drawHeight / maxHeightInput * 0.98;
-                }
-                 // Ensure scale is not zero or negative if all inputs are zero
-                 if (scale <= 0) scale = 1;
+            const overlayMaps = {
+                "Plot Shape": plotLayer
+            };
 
+            // Add the layers control to the map
+            L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-                // Calculate scaled dimensions for drawing
-                const scaledFront = front * scale;
-                const scaledBack = back * scale;
-                const scaledLeft = left * scale;
-                const scaledRight = right * scale;
+            let pointCounter = 0;
 
-                // Calculate average scaled height for drawing (used for vertical positioning)
-                // We draw a trapezoid based on front/back widths and average height
-                const visualHeight = (scaledLeft + scaledRight) / 2;
+            // --- Default Coordinates ---
+            const defaultCoords = [
+                { x: 471012.993, y: 1001047.863 },
+                { x: 471021.043, y: 1001038.561 },
+                { x: 471003.307, y: 1001022.357 },
+                { x: 470994.797, y: 1001031.237 },
+                { x: 471012.993, y: 1001047.863 }
+            ];
 
-                // Prevent visualHeight from being NaN or zero if inputs are zero
-                const safeVisualHeight = isNaN(visualHeight) || visualHeight <= 0 ? 1 : visualHeight; // Use a minimal height if needed
-
-
-                // Center the shape horizontally and vertically within the padded area
-                const maxScaledWidth = Math.max(scaledFront, scaledBack);
-                 const startX = padding + (drawWidth - maxScaledWidth) / 2;
-                 const startY = padding + (drawHeight - safeVisualHeight) / 2;
-
-
-                // Calculate corner coordinates (drawing a trapezoid)
-                // p1: bottom-left
-                const p1x = startX + (maxScaledWidth - scaledFront) / 2;
-                const p1y = startY + safeVisualHeight;
-
-                // p2: bottom-right
-                const p2x = p1x + scaledFront;
-                const p2y = p1y;
-
-                // p3: top-right
-                const p3x = startX + (maxScaledWidth - scaledBack) / 2 + scaledBack;
-                const p3y = startY;
-
-                // p4: top-left
-                const p4x = startX + (maxScaledWidth - scaledBack) / 2;
-                const p4y = startY;
-
-                // Create points string for the polygon
-                // Ensure points are valid numbers
-                const points = [
-                    [p1x, p1y], [p2x, p2y], [p3x, p3y], [p4x, p4y]
-                ]
-                .map(p => `${isNaN(p[0]) ? 0 : p[0].toFixed(2)},${isNaN(p[1]) ? 0 : p[1].toFixed(2)}`) // Format and handle potential NaN
-                .join(' ');
-
-
-                // Update the polygon
-                landPolygon.setAttribute('points', points);
+            // --- Functions ---
+            function addPointRow(xVal = '', yVal = '') {
+                pointCounter++;
+                const row = coordTableBody.insertRow();
+                // Ensure values are treated as strings for the input field
+                const displayX = (xVal !== '' && xVal !== null) ? String(xVal) : '';
+                const displayY = (yVal !== '' && yVal !== null) ? String(yVal) : '';
+                row.innerHTML = `
+                    <td class="point-id">${pointCounter}</td>
+                    <td><input type="number" value="${displayX}" step="any" class="form-control form-control-sm coord-input x-input" placeholder="X"></td>
+                    <td><input type="number" value="${displayY}" step="any" class="form-control form-control-sm coord-input y-input" placeholder="Y"></td>
+                    <td class="text-center"><i class="bi bi-x-circle remove-row-btn" title="Remove Point"></i></td>
+                `;
+                row.querySelector('.remove-row-btn').addEventListener('click', (e) => {
+                    // Find the row associated with the clicked button and remove it
+                     e.target.closest('tr').remove();
+                    renumberPoints();
+                });
+                 return row;
             }
 
-            // Add event listeners to inputs
-            frontInput.addEventListener('input', updateShapeAndArea);
-            backInput.addEventListener('input', updateShapeAndArea);
-            leftInput.addEventListener('input', updateShapeAndArea);
-            rightInput.addEventListener('input', updateShapeAndArea);
+             function renumberPoints() {
+                const rows = coordTableBody.querySelectorAll('tr');
+                pointCounter = 0;
+                rows.forEach((row) => {
+                     pointCounter++;
+                    row.querySelector('.point-id').textContent = pointCounter;
+                });
+            }
 
-            // Initial calculation and drawing on page load
-            updateShapeAndArea();
+            function plotCoordinates() {
+                plotLayer.clearLayers();
+                const originalPoints = [];
+                const rows = coordTableBody.querySelectorAll('tr');
+
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                let hasValidData = false;
+
+                rows.forEach(row => {
+                    const xInput = row.querySelector('.x-input');
+                    const yInput = row.querySelector('.y-input');
+                    const x = parseFloat(xInput.value);
+                    const y = parseFloat(yInput.value);
+
+                    if (xInput && yInput && !isNaN(x) && !isNaN(y)) { // Check inputs exist
+                        originalPoints.push({ x, y });
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x);
+                        maxY = Math.max(maxY, y);
+                        hasValidData = true;
+                    } else {
+                         console.warn("Skipping row with invalid or missing coordinates:", row);
+                    }
+                });
+
+                 if (!hasValidData) {
+                    // Optional: Add a message on the map or an alert
+                    console.log("No valid coordinates found to plot.");
+                     return; // Exit if no valid data
+                 }
+                 if (originalPoints.length < 3 && originalPoints.length > 0) {
+                    console.warn("Need at least 3 points for a polygon. Plotting points only.");
+                 } else if (originalPoints.length === 0) {
+                      console.log("No valid coordinates found to plot.");
+                    return; // Exit if no points at all
+                 }
+
+                 const rangeX = maxX - minX;
+                 const rangeY = maxY - minY;
+
+                 // Approximate meters per degree at the base latitude
+                 const latRad = baseCoords[0] * Math.PI / 180;
+                 const metersPerDegreeLat = 111132.954 - 559.822 * Math.cos(2 * latRad) + 1.175 * Math.cos(4 * latRad);
+                 const metersPerDegreeLon = (Math.PI / 180) * 6378137 * Math.cos(latRad);
+
+                 // Calculate centroid of original points (UTM) for centering the offsets
+                 let centroidX = 0; let centroidY = 0;
+                 if (originalPoints.length > 0) {
+                     originalPoints.forEach(p => { centroidX += p.x; centroidY += p.y; });
+                     centroidX /= originalPoints.length;
+                     centroidY /= originalPoints.length;
+                 } else {
+                     // Should not happen due to earlier checks, but handle defensively
+                     centroidX = minX; // Fallback
+                     centroidY = minY;
+                 }
+
+
+                 const scaledCoordinatePairs = [];
+
+                 originalPoints.forEach(p => {
+                    // Offset from the centroid in meters
+                    const offsetX_meters = p.x - centroidX;
+                    const offsetY_meters = p.y - centroidY;
+
+                    // Convert meter offset to degree offset (APPROXIMATE)
+                    // Avoid division by zero if metersPerDegree is somehow calculated as zero
+                    const latOffset_deg = (metersPerDegreeLat !== 0) ? offsetY_meters / metersPerDegreeLat : 0;
+                    const lonOffset_deg = (metersPerDegreeLon !== 0) ? offsetX_meters / metersPerDegreeLon : 0;
+
+                    // Add degree offset to the base Lat/Lon
+                    const plotLat = baseCoords[0] + latOffset_deg;
+                    const plotLon = baseCoords[1] + lonOffset_deg;
+
+                     scaledCoordinatePairs.push([plotLat, plotLon]);
+                 });
+
+
+                // --- Plotting on Leaflet ---
+                try {
+                    if (scaledCoordinatePairs.length >= 3) {
+                         const polygon = L.polygon(scaledCoordinatePairs, {
+                             color: '#0d6efd', weight: 2, fillColor: '#0d6efd', fillOpacity: 0.15
+                        }).addTo(plotLayer);
+
+                         scaledCoordinatePairs.forEach((coord, index) => {
+                             L.circleMarker(coord, {
+                                 radius: 4, fillColor: "#ff7800", color: "#000",
+                                 weight: 1, opacity: 1, fillOpacity: 0.9
+                            }).bindTooltip(`Point ${index + 1} (Approx. Position)`)
+                               .addTo(plotLayer);
+                         });
+
+                        // Only fit bounds if there are points to fit
+                        if (scaledCoordinatePairs.length > 0) {
+                             map.fitBounds(polygon.getBounds(), { padding: [40, 40] });
+                         } else {
+                             map.setView(baseCoords, initialZoom); // Reset view if no points
+                         }
+
+                    } else if (scaledCoordinatePairs.length > 0) { // Plot points only
+                         scaledCoordinatePairs.forEach((coord, index) => {
+                            L.circleMarker(coord, { radius: 4, color: '#ff7800'}).bindTooltip(`Point ${index + 1} (Approx. Position)`).addTo(plotLayer);
+                         });
+                         if(scaledCoordinatePairs.length === 1) map.setView(scaledCoordinatePairs[0], 18);
+                         else if (scaledCoordinatePairs.length > 1) {
+                            // Fit bounds for multiple points even if not enough for polygon
+                            map.fitBounds(L.latLngBounds(scaledCoordinatePairs), { padding: [40, 40] });
+                         }
+                    } else {
+                        // No points to plot, maybe clear map or show message
+                         map.setView(baseCoords, initialZoom); // Reset view
+                    }
+
+                } catch (e) {
+                     console.error("Error creating Leaflet feature:", e);
+                     alert("Could not plot the shape. Check console for errors.");
+                }
+            }
+
+            // --- Event Listeners ---
+            addPointBtn.addEventListener('click', () => addPointRow());
+            plotMapBtn.addEventListener('click', plotCoordinates);
+
+
+            // --- Initial Setup ---
+            // Clear any potential stale rows first (defensive)
+            coordTableBody.innerHTML = '';
+            pointCounter = 0; // Reset counter before adding defaults
+            // Populate with default coordinates
+            defaultCoords.forEach(coord => {
+                addPointRow(coord.x, coord.y);
+            });
+            // Automatically plot the default data on load
+             plotCoordinates();
+
         });
     </script>
 
 </body>
-  </html>
+</html>

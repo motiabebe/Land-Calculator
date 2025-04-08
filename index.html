@@ -3,103 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Land Area Calculator</title>
+    <title>Land Area Calculator & Visualizer</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- html2canvas Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <!-- Embedded CSS -->
     <style>
+        body {
+            background-color: #f8f9fa; /* Light gray background */
+            padding-top: 1rem; /* Add some space at the top */
+        }
+
+        .card {
+            border: none; /* Remove default card border if using shadows */
+            height: 100%; /* Make cards in a row equal height */
+        }
+
         #landShape {
-            border: 1px solid #ccc;
-            background-color: #f8f9fa; /* Light background for the canvas */
-            display: block; /* Helps with centering sometimes */
-            margin: auto; /* Center the SVG if its container allows */
-            max-width: 100%; /* Make SVG responsive */
-            height: auto; /* Maintain aspect ratio */
-            /* Explicit viewbox for consistent scaling in JS */
+            /* Border removed here, applied to container instead */
+            background-color: #ffffff; /* White background for SVG content itself */
+            display: block;
+            margin: auto;
+            max-width: 100%;
+            height: auto;
             /* viewbox defines the coordinate system x, y, width, height */
             viewBox: "0 0 400 350";
         }
 
         #landPolygon {
-            fill: rgba(40, 167, 69, 0.4); /* Semi-transparent green */
-            stroke: #212529; /* Dark stroke */
+            fill: rgba(25, 135, 84, 0.3);  /* Bootstrap success color, semi-transparent */
+            stroke: #198754; /* Bootstrap success color */
             stroke-width: 2;
         }
 
-        /* Optional: Style for text labels if you add them */
-        /*
+        /* Style for the dimension labels on the shape */
         #landShape text {
             font-family: sans-serif;
             font-size: 10px;
-            fill: #555;
+            fill: #212529; /* Dark text */
+            text-anchor: middle; /* Center text horizontally */
+            dominant-baseline: middle; /* Center text vertically */
         }
-        */
 
-         /* Ensure SVG container takes up space */
+        /* Container for the SVG, this is what gets exported */
         .svg-container {
-            min-height: 380px; /* Adjust as needed */
+            min-height: 380px;
             width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
+            background-color: #f1f3f5; /* Slightly different bg for contrast */
+             border: 1px solid #dee2e6; /* Border on the container */
+             border-radius: var(--bs-card-inner-border-radius); /* Match card's border radius */
+             padding: 1rem;
+             overflow: hidden; /* Ensure nothing spills out */
         }
+
+        /* Center input group headings */
+        .input-group-heading {
+             text-align: center;
+             margin-bottom: 0.75rem; /* Slightly more space */
+             color: #6c757d; /* Bootstrap secondary text color */
+             font-weight: 500;
+        }
+
+        /* Make labels slightly bolder */
+        .form-label {
+            font-weight: 500;
+        }
+
     </style>
 </head>
 <body>
-    <div class="container mt-4">
-        <h1 class="mb-4 text-center">Land Plot Area Calculator & Visualizer</h1>
+    <div class="container mt-4 mb-5">
+        <h1 class="mb-5 text-center fw-light">Land Plot Calculator</h1>
 
         <div class="row g-4">
-            <!-- Input Column -->
-            <div class="col-md-5">
-                <h2>Enter Dimensions (meters)</h2>
-                <form id="landForm">
-                    <div class="mb-3">
-                        <label for="front" class="form-label">Front:</label>
-                        <input type="number" class="form-control" id="front" min="0" step="0.01" placeholder="e.g., 10.5">
+            <!-- Input & Results Column -->
+            <div class="col-lg-5 d-flex flex-column"> 
+                <div class="card shadow-sm mb-4 flex-grow-1"> 
+                    <div class="card-body p-4">
+                        <h2 class="card-title mb-4 text-center h4">Enter Dimensions (meters)</h2> 
+                        <form id="landForm">
+                            <div class="row">
+                                <!-- Width Inputs -->
+                                <div class="col-md-6 mb-3">
+                                    <h5 class="input-group-heading">Widths</h5>
+                                    <div class="mb-3">
+                                        <label for="front" class="form-label">Front:</label>
+                                        <input type="number" class="form-control" id="front" min="0" step="0.01" placeholder="e.g., 11.50">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="back" class="form-label">Back:</label>
+                                        <input type="number" class="form-control" id="back" min="0" step="0.01" placeholder="e.g., 12.30">
+                                    </div>
+                                </div>
+                                <!-- Depth/Length Inputs -->
+                                <div class="col-md-6 mb-3">
+                                    <h5 class="input-group-heading">Depths</h5>
+                                     <div class="mb-3">
+                                        <label for="left" class="form-label">Left Side:</label>
+                                        <input type="number" class="form-control" id="left" min="0" step="0.01" placeholder="e.g., 24.65">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="right" class="form-label">Right Side:</label>
+                                        <input type="number" class="form-control" id="right" min="0" step="0.01" placeholder="e.g., 24.71">
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
                     </div>
-                    <div class="mb-3">
-                        <label for="back" class="form-label">Back:</label>
-                        <input type="number" class="form-control" id="back" min="0" step="0.01" placeholder="e.g., 12.0">
-                    </div>
-                    <div class="mb-3">
-                        <label for="left" class="form-label">Left Side:</label>
-                        <input type="number" class="form-control" id="left" min="0" step="0.01" placeholder="e.g., 20.0">
-                    </div>
-                    <div class="mb-3">
-                        <label for="right" class="form-label">Right Side:</label>
-                        <input type="number" class="form-control" id="right" min="0" step="0.01" placeholder="e.g., 21.5">
-                    </div>
-                </form>
+                </div>
 
-                <hr>
-
-                <h2>Approximate Area:</h2>
-                <p class="fs-4">
-                    <span id="resultArea" class="fw-bold">0.00</span> sq. meters
-                </p>
-                 <p class="text-muted small">
-                    Note: This area calculation is an approximation (Average Length x Average Width) suitable for relatively regular plots. Exact area calculation for irregular quadrilaterals requires additional information like angles or diagonals.
-                 </p>
-
+                <div class="card shadow-sm">
+                     <div class="card-body p-4">
+                        <h2 class="card-title mb-3 text-center h4">Approximate Area</h2>
+                        <p class="fs-3 text-center mb-2">
+                            <span id="resultArea" class="fw-bold text-success">0.00</span> sq. meters
+                        </p>
+                        <p class="text-muted small text-center mb-3">
+                            (Average Width × Average Depth)
+                        </p>
+                         <div class="d-grid gap-2">
+                             <button class="btn btn-primary" id="exportButton">
+                                 <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                                 <i class="bi bi-download me-1"></i>
+                                 <span class="button-text">Export Preview as PNG</span>
+                             </button>
+                         </div>
+                         <p class="text-muted small mt-3 mb-0">
+                            Note: This area calculation is an approximation suitable for relatively regular plots. Exact area calculation for irregular quadrilaterals requires additional information like angles or diagonals.
+							
+                         </p>
+                    </div>
+                </div>
             </div>
 
             <!-- Visualization Column -->
-            <div class="col-md-7">
-                 <h2 class="text-center">Live Shape Preview</h2>
-                 <div class="svg-container">
-                     <!-- Define SVG with viewBox for consistent coordinate system -->
-                     <svg id="landShape" viewBox="0 0 400 350" preserveAspectRatio="xMidYMid meet" width="100%" height="350">
-                         <polygon id="landPolygon" points="50,300 150,300 150,200 50,200" />
-                         <!-- Labels can be added here if needed -->
-                     </svg>
+            <div class="col-lg-7">
+                 <div class="card shadow-sm">
+                     <div class="card-body p-4">
+                          <h2 class="card-title mb-4 text-center h4">Live Shape Preview</h2>
+                          <div class="svg-container shadow-sm bg-light">
+                              <svg id="landShape" viewBox="0 0 400 350" preserveAspectRatio="xMidYMid meet" width="100%" height="350">
+                                  <polygon id="landPolygon" points="50,300 150,300 150,200 50,200" />
+                                  <text id="labelFront" x="100" y="315">Front</text>
+                                  <text id="labelBack" x="100" y="185">Back</text>
+                                  <text id="labelLeft" x="40" y="250">Left</text>
+                                  <text id="labelRight" x="160" y="250">Right</text>
+                              </svg>
+                          </div>
+                     </div>
                  </div>
-
             </div>
         </div>
-
-
     </div>
 
     <!-- Bootstrap 5 JS Bundle (includes Popper) -->
@@ -108,7 +169,7 @@
     <!-- Embedded JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Get DOM elements
+            // --- Get DOM elements ---
             const frontInput = document.getElementById('front');
             const backInput = document.getElementById('back');
             const leftInput = document.getElementById('left');
@@ -116,114 +177,161 @@
             const resultAreaSpan = document.getElementById('resultArea');
             const landPolygon = document.getElementById('landPolygon');
             const svgElement = document.getElementById('landShape');
+            const exportButton = document.getElementById('exportButton');
+            const svgContainer = document.querySelector('.svg-container'); 
+            const exportSpinner = exportButton.querySelector('.spinner-border');
+            const exportButtonText = exportButton.querySelector('.button-text');
+            const exportButtonIcon = exportButton.querySelector('.bi-download');
 
-            // Get SVG dimensions from the viewBox attribute for coordinate system
+
+            // Labels
+            const labelFront = document.getElementById('labelFront');
+            const labelBack = document.getElementById('labelBack');
+            const labelLeft = document.getElementById('labelLeft');
+            const labelRight = document.getElementById('labelRight');
+
+            // --- Constants ---
             const svgWidth = svgElement.viewBox.baseVal.width;
             const svgHeight = svgElement.viewBox.baseVal.height;
-            const padding = 40; // Padding inside SVG canvas coordinate system
+            const padding = 50; 
+            const labelOffset = 12; 
 
             function updateShapeAndArea() {
-                // Get values, default to 0 if NaN or empty
+                 // Get values, default to 0 if NaN or empty
                 const front = parseFloat(frontInput.value) || 0;
                 const back = parseFloat(backInput.value) || 0;
                 const left = parseFloat(leftInput.value) || 0;
                 const right = parseFloat(rightInput.value) || 0;
 
-                // --- Area Calculation (Approximation) ---
-                // Using Average Length x Average Width method
+                // Area Calculation (Approximation)
                 const avgWidth = (front + back) / 2;
                 const avgHeight = (left + right) / 2;
                 const area = avgWidth * avgHeight;
-
-                // Display area
                 resultAreaSpan.textContent = area.toFixed(2);
 
-                // --- Visualization ---
+                // Visualization
                 if (!svgWidth || !svgHeight) {
-                    console.error("SVG dimensions not found. Ensure SVG has width/height or viewBox.");
-                    return; // Exit if dimensions aren't set
+                    console.error("SVG dimensions not found.");
+                    return;
                 }
 
-                // Determine max dimensions from input for scaling base
-                const maxWidthInput = Math.max(front, back, 1); // Avoid division by zero, use at least 1
+                const maxWidthInput = Math.max(front, back, 1);
                 const maxHeightInput = Math.max(left, right, 1);
-
-                // Calculate available drawing space within the SVG coordinate system
                 const drawWidth = svgWidth - 2 * padding;
                 const drawHeight = svgHeight - 2 * padding;
 
-                // Calculate scale factor - fit the larger dimension into available space
                 let scale = 1;
-                if (maxWidthInput > 0 && maxHeightInput > 0) {
-                     scale = Math.min(drawWidth / maxWidthInput, drawHeight / maxHeightInput);
-                     // Add a small factor to prevent touching edges if dimensions exactly match drawing space
-                     scale *= 0.98;
-                } else if (maxWidthInput > 0) {
-                    scale = drawWidth / maxWidthInput * 0.98;
-                } else if (maxHeightInput > 0) {
-                    scale = drawHeight / maxHeightInput * 0.98;
+                if (maxWidthInput > 0 || maxHeightInput > 0) {
+                    const scaleX = maxWidthInput > 0 ? drawWidth / maxWidthInput : Infinity;
+                    const scaleY = maxHeightInput > 0 ? drawHeight / maxHeightInput : Infinity;
+                    scale = Math.min(scaleX, scaleY);
                 }
-                 // Ensure scale is not zero or negative if all inputs are zero
-                 if (scale <= 0) scale = 1;
+                 if (scale <= 0 || !isFinite(scale)) scale = 1; // Prevent zero/infinite scale
 
-
-                // Calculate scaled dimensions for drawing
                 const scaledFront = front * scale;
                 const scaledBack = back * scale;
                 const scaledLeft = left * scale;
                 const scaledRight = right * scale;
-
-                // Calculate average scaled height for drawing (used for vertical positioning)
-                // We draw a trapezoid based on front/back widths and average height
                 const visualHeight = (scaledLeft + scaledRight) / 2;
-
-                // Prevent visualHeight from being NaN or zero if inputs are zero
-                const safeVisualHeight = isNaN(visualHeight) || visualHeight <= 0 ? 1 : visualHeight; // Use a minimal height if needed
-
-
-                // Center the shape horizontally and vertically within the padded area
+                const safeVisualHeight = isNaN(visualHeight) || visualHeight <= 0 ? 1 : visualHeight;
                 const maxScaledWidth = Math.max(scaledFront, scaledBack);
-                 const startX = padding + (drawWidth - maxScaledWidth) / 2;
-                 const startY = padding + (drawHeight - safeVisualHeight) / 2;
 
+                const startX = padding + (drawWidth - maxScaledWidth) / 2;
+                const startY = padding + (drawHeight - safeVisualHeight) / 2;
 
-                // Calculate corner coordinates (drawing a trapezoid)
-                // p1: bottom-left
+                // Corner coordinates (Trapezoid)
                 const p1x = startX + (maxScaledWidth - scaledFront) / 2;
                 const p1y = startY + safeVisualHeight;
-
-                // p2: bottom-right
                 const p2x = p1x + scaledFront;
                 const p2y = p1y;
-
-                // p3: top-right
                 const p3x = startX + (maxScaledWidth - scaledBack) / 2 + scaledBack;
                 const p3y = startY;
-
-                // p4: top-left
                 const p4x = startX + (maxScaledWidth - scaledBack) / 2;
                 const p4y = startY;
 
-                // Create points string for the polygon
-                // Ensure points are valid numbers
-                const points = [
-                    [p1x, p1y], [p2x, p2y], [p3x, p3y], [p4x, p4y]
-                ]
-                .map(p => `${isNaN(p[0]) ? 0 : p[0].toFixed(2)},${isNaN(p[1]) ? 0 : p[1].toFixed(2)}`) // Format and handle potential NaN
-                .join(' ');
-
-
-                // Update the polygon
+                const formatPoint = (x, y) => `${isNaN(x) ? 0 : x.toFixed(1)},${isNaN(y) ? 0 : y.toFixed(1)}`;
+                const points = `${formatPoint(p1x, p1y)} ${formatPoint(p2x, p2y)} ${formatPoint(p3x, p3y)} ${formatPoint(p4x, p4y)}`;
                 landPolygon.setAttribute('points', points);
+
+                // --- Update Labels ---
+                labelFront.setAttribute('x', (p1x + p2x) / 2);
+                labelFront.setAttribute('y', p1y + labelOffset);
+                labelFront.textContent = front > 0 ? front.toFixed(2) : '';
+                labelFront.setAttribute('transform', '');
+
+                labelBack.setAttribute('x', (p4x + p3x) / 2);
+                labelBack.setAttribute('y', p4y - labelOffset);
+                labelBack.textContent = back > 0 ? back.toFixed(2) : '';
+                labelBack.setAttribute('transform', '');
+
+                const midLeftX = (p1x + p4x) / 2;
+                const midLeftY = (p1y + p4y) / 2;
+                labelLeft.setAttribute('x', midLeftX - labelOffset);
+                labelLeft.setAttribute('y', midLeftY);
+                labelLeft.setAttribute('transform', `rotate(-90 ${midLeftX - labelOffset},${midLeftY})`);
+                labelLeft.textContent = left > 0 ? left.toFixed(2) : '';
+
+                const midRightX = (p2x + p3x) / 2;
+                const midRightY = (p2y + p3y) / 2;
+                labelRight.setAttribute('x', midRightX + labelOffset);
+                labelRight.setAttribute('y', midRightY);
+                labelRight.setAttribute('transform', `rotate(90 ${midRightX + labelOffset},${midRightY})`);
+                labelRight.textContent = right > 0 ? right.toFixed(2) : '';
             }
 
-            // Add event listeners to inputs
+            // --- Export Functionality using html2canvas ---
+            async function exportPreviewAsPng() {
+                if (!svgContainer) {
+                    alert('Error: Preview container not found.');
+                    return;
+                }
+
+                // Disable button and show spinner
+                exportButton.disabled = true;
+                exportSpinner.classList.remove('d-none');
+                exportButtonIcon.classList.add('d-none'); // Hide icon
+                exportButtonText.textContent = 'Exporting...';
+
+                try {
+                    // Options for html2canvas (optional, e.g., for better rendering)
+                    const options = {
+                        scale: 2, // Increase resolution
+                        useCORS: true, // If SVG potentially loads external resources
+                        logging: false, // Disable console logging from html2canvas
+                        backgroundColor: window.getComputedStyle(svgContainer).backgroundColor // Use computed background
+                    };
+
+                    const canvas = await html2canvas(svgContainer, options);
+
+                    // Create download link
+                    const pngUrl = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    link.href = pngUrl;
+                    link.download = 'land_plot_preview.png'; // Changed filename slightly
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                } catch (error) {
+                    console.error('Error exporting using html2canvas:', error);
+                    alert('An error occurred while exporting the image. Please try again.');
+                } finally {
+                     // Re-enable button and hide spinner regardless of success/failure
+                     exportButton.disabled = false;
+                     exportSpinner.classList.add('d-none');
+                     exportButtonIcon.classList.remove('d-none'); // Show icon again
+                     exportButtonText.textContent = 'Export Preview as PNG';
+                }
+            }
+
+            // --- Event Listeners ---
             frontInput.addEventListener('input', updateShapeAndArea);
             backInput.addEventListener('input', updateShapeAndArea);
             leftInput.addEventListener('input', updateShapeAndArea);
             rightInput.addEventListener('input', updateShapeAndArea);
+            exportButton.addEventListener('click', exportPreviewAsPng);
 
-            // Initial calculation and drawing on page load
+            // --- Initial Call ---
             updateShapeAndArea();
         });
     </script>
