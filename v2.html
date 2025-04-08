@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Land Area Calculator</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+
+    <!-- Embedded CSS -->
+    <style>
+        #landShape {
+            border: 1px solid #ccc;
+            background-color: #f8f9fa; /* Light background for the canvas */
+            display: block; /* Helps with centering sometimes */
+            margin: auto; /* Center the SVG if its container allows */
+            max-width: 100%; /* Make SVG responsive */
+            height: auto; /* Maintain aspect ratio */
+            /* Explicit viewbox for consistent scaling in JS */
+            /* viewbox defines the coordinate system x, y, width, height */
+            viewBox: "0 0 400 350";
+        }
+
+        #landPolygon {
+            fill: rgba(40, 167, 69, 0.4); /* Semi-transparent green */
+            stroke: #212529; /* Dark stroke */
+            stroke-width: 2;
+        }
+
+        /* Optional: Style for text labels if you add them */
+        /*
+        #landShape text {
+            font-family: sans-serif;
+            font-size: 10px;
+            fill: #555;
+        }
+        */
+
+         /* Ensure SVG container takes up space */
+        .svg-container {
+            min-height: 380px; /* Adjust as needed */
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4 text-center">Land Plot Area Calculator & Visualizer</h1>
+
+        <div class="row g-4">
+            <!-- Input Column -->
+            <div class="col-md-5">
+                <h2>Enter Dimensions (meters)</h2>
+                <form id="landForm">
+                    <div class="mb-3">
+                        <label for="front" class="form-label">Front:</label>
+                        <input type="number" class="form-control" id="front" min="0" step="0.01" placeholder="e.g., 10.5">
+                    </div>
+                    <div class="mb-3">
+                        <label for="back" class="form-label">Back:</label>
+                        <input type="number" class="form-control" id="back" min="0" step="0.01" placeholder="e.g., 12.0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="left" class="form-label">Left Side:</label>
+                        <input type="number" class="form-control" id="left" min="0" step="0.01" placeholder="e.g., 20.0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="right" class="form-label">Right Side:</label>
+                        <input type="number" class="form-control" id="right" min="0" step="0.01" placeholder="e.g., 21.5">
+                    </div>
+                </form>
+
+                <hr>
+
+                <h2>Approximate Area:</h2>
+                <p class="fs-4">
+                    <span id="resultArea" class="fw-bold">0.00</span> sq. meters
+                </p>
+                 <p class="text-muted small">
+                    Note: This area calculation is an approximation (Average Length x Average Width) suitable for relatively regular plots. Exact area calculation for irregular quadrilaterals requires additional information like angles or diagonals.
+                 </p>
+
+            </div>
+
+            <!-- Visualization Column -->
+            <div class="col-md-7">
+                 <h2 class="text-center">Live Shape Preview</h2>
+                 <div class="svg-container">
+                     <!-- Define SVG with viewBox for consistent coordinate system -->
+                     <svg id="landShape" viewBox="0 0 400 350" preserveAspectRatio="xMidYMid meet" width="100%" height="350">
+                         <polygon id="landPolygon" points="50,300 150,300 150,200 50,200" />
+                         <!-- Labels can be added here if needed -->
+                     </svg>
+                 </div>
+
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle (includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+    <!-- Embedded JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get DOM elements
+            const frontInput = document.getElementById('front');
+            const backInput = document.getElementById('back');
+            const leftInput = document.getElementById('left');
+            const rightInput = document.getElementById('right');
+            const resultAreaSpan = document.getElementById('resultArea');
+            const landPolygon = document.getElementById('landPolygon');
+            const svgElement = document.getElementById('landShape');
+
+            // Get SVG dimensions from the viewBox attribute for coordinate system
+            const svgWidth = svgElement.viewBox.baseVal.width;
+            const svgHeight = svgElement.viewBox.baseVal.height;
+            const padding = 40; // Padding inside SVG canvas coordinate system
+
+            function updateShapeAndArea() {
+                // Get values, default to 0 if NaN or empty
+                const front = parseFloat(frontInput.value) || 0;
+                const back = parseFloat(backInput.value) || 0;
+                const left = parseFloat(leftInput.value) || 0;
+                const right = parseFloat(rightInput.value) || 0;
+
+                // --- Area Calculation (Approximation) ---
+                // Using Average Length x Average Width method
+                const avgWidth = (front + back) / 2;
+                const avgHeight = (left + right) / 2;
+                const area = avgWidth * avgHeight;
+
+                // Display area
+                resultAreaSpan.textContent = area.toFixed(2);
+
+                // --- Visualization ---
+                if (!svgWidth || !svgHeight) {
+                    console.error("SVG dimensions not found. Ensure SVG has width/height or viewBox.");
+                    return; // Exit if dimensions aren't set
+                }
+
+                // Determine max dimensions from input for scaling base
+                const maxWidthInput = Math.max(front, back, 1); // Avoid division by zero, use at least 1
+                const maxHeightInput = Math.max(left, right, 1);
+
+                // Calculate available drawing space within the SVG coordinate system
+                const drawWidth = svgWidth - 2 * padding;
+                const drawHeight = svgHeight - 2 * padding;
+
+                // Calculate scale factor - fit the larger dimension into available space
+                let scale = 1;
+                if (maxWidthInput > 0 && maxHeightInput > 0) {
+                     scale = Math.min(drawWidth / maxWidthInput, drawHeight / maxHeightInput);
+                     // Add a small factor to prevent touching edges if dimensions exactly match drawing space
+                     scale *= 0.98;
+                } else if (maxWidthInput > 0) {
+                    scale = drawWidth / maxWidthInput * 0.98;
+                } else if (maxHeightInput > 0) {
+                    scale = drawHeight / maxHeightInput * 0.98;
+                }
+                 // Ensure scale is not zero or negative if all inputs are zero
+                 if (scale <= 0) scale = 1;
+
+
+                // Calculate scaled dimensions for drawing
+                const scaledFront = front * scale;
+                const scaledBack = back * scale;
+                const scaledLeft = left * scale;
+                const scaledRight = right * scale;
+
+                // Calculate average scaled height for drawing (used for vertical positioning)
+                // We draw a trapezoid based on front/back widths and average height
+                const visualHeight = (scaledLeft + scaledRight) / 2;
+
+                // Prevent visualHeight from being NaN or zero if inputs are zero
+                const safeVisualHeight = isNaN(visualHeight) || visualHeight <= 0 ? 1 : visualHeight; // Use a minimal height if needed
+
+
+                // Center the shape horizontally and vertically within the padded area
+                const maxScaledWidth = Math.max(scaledFront, scaledBack);
+                 const startX = padding + (drawWidth - maxScaledWidth) / 2;
+                 const startY = padding + (drawHeight - safeVisualHeight) / 2;
+
+
+                // Calculate corner coordinates (drawing a trapezoid)
+                // p1: bottom-left
+                const p1x = startX + (maxScaledWidth - scaledFront) / 2;
+                const p1y = startY + safeVisualHeight;
+
+                // p2: bottom-right
+                const p2x = p1x + scaledFront;
+                const p2y = p1y;
+
+                // p3: top-right
+                const p3x = startX + (maxScaledWidth - scaledBack) / 2 + scaledBack;
+                const p3y = startY;
+
+                // p4: top-left
+                const p4x = startX + (maxScaledWidth - scaledBack) / 2;
+                const p4y = startY;
+
+                // Create points string for the polygon
+                // Ensure points are valid numbers
+                const points = [
+                    [p1x, p1y], [p2x, p2y], [p3x, p3y], [p4x, p4y]
+                ]
+                .map(p => `${isNaN(p[0]) ? 0 : p[0].toFixed(2)},${isNaN(p[1]) ? 0 : p[1].toFixed(2)}`) // Format and handle potential NaN
+                .join(' ');
+
+
+                // Update the polygon
+                landPolygon.setAttribute('points', points);
+            }
+
+            // Add event listeners to inputs
+            frontInput.addEventListener('input', updateShapeAndArea);
+            backInput.addEventListener('input', updateShapeAndArea);
+            leftInput.addEventListener('input', updateShapeAndArea);
+            rightInput.addEventListener('input', updateShapeAndArea);
+
+            // Initial calculation and drawing on page load
+            updateShapeAndArea();
+        });
+    </script>
+
+</body>
+  </html>
